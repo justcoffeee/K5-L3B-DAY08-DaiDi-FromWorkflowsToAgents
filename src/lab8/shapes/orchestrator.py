@@ -25,7 +25,7 @@ from lab8.durability import InjectedCrash, issue_refund
 from lab8.handoff import make_handoff
 from lab8.mock_llm import complete
 from lab8.runtime import run_readonly_investigators
-from lab8.schemas import Budget, make_run_id
+from lab8.schemas import Budget, make_run_id, RunResult
 from lab8.shapes.common import finish, safe_dump
 from lab8.tools import compute_compensation, get_claim_view, tool_cost
 from lab8.trace import Trace
