@@ -14,7 +14,8 @@
 
 Tôi phụ trách hoàn thiện và kiểm tra **Shape A — Workflow**, tập trung vào file
 `src/lab8/shapes/workflow.py`. Phần đóng góp của tôi là bản cập nhật workflow
-trong commit `94735f4`, phát triển trên mã nguồn đã có của nhóm.
+trong commit `94735f4`, phát triển trên mã nguồn đã có của nhóm. Shape A `workflow`
+sau đó được nhóm chọn làm shape chấm hidden (xem `report/team/decision_adr.md`).
 
 Phạm vi công việc gồm xây dựng luồng xử lý claim bằng các bước Python cố định;
 đọc dữ liệu đúng quyền của principal; tính mức bồi thường từ dữ liệu đơn hàng và
@@ -72,8 +73,8 @@ Các bước xử lý trong workflow:
 
 ### 3.3. Kiểm thử bổ sung tại máy làm bài
 
-Với sự hỗ trợ của Codex, bổ sung file `src/tests/test_workflow_edges.py` trong bản
-làm bài local để kiểm tra các tình huống ngoài ma trận public:
+Với sự hỗ trợ của Codex, bổ sung file `src/tests/test_workflow_edges.py` để
+kiểm tra các tình huống ngoài ma trận public:
 
 - `test_unknown_claim_returns_failed_with_fresh_trace`: claim không tồn tại vẫn
   trả kết quả `failed` và có trace đúng run ID.
@@ -83,8 +84,9 @@ làm bài local để kiểm tra các tình huống ngoài ma trận public:
 - `test_changed_quote_on_retry_preserves_committed_amount`: quote thay đổi khi
   retry phải báo `amount_conflict`, giữ nguyên khoản đã commit.
 
-File test bổ sung và các báo cáo benchmark riêng hiện nằm ở bản làm bài local.
-Commit `94735f4` đưa lên GitHub chỉ thay đổi `workflow.py`.
+File test bổ sung đã được đưa lên main tại commit `20865aa`.
+Commit `94735f4` đưa lên GitHub phần thay đổi `workflow.py`; commit `20865aa`
+đưa lên phần test edge-case.
 
 ## 4. Bằng chứng
 
@@ -102,13 +104,14 @@ Các lệnh được chạy trong thư mục `src` của bản làm bài trên �
 | Nội dung kiểm tra | Kết quả | Phạm vi |
 | --- | --- | --- |
 | Starter smoke | `lab8.smoke pass` | Kiểm tra môi trường và swarm tham chiếu |
-| Ma trận public workflow | `62 passed, 245 deselected` | Workflow T01–T14, gồm retry và crash/resume |
-| Bộ host và test bổ sung local | `59 passed, 248 deselected` | Cổng host cùng 5 trường hợp test workflow bổ sung |
+| Ma trận public workflow | `62 passed` | Workflow T01–T14, gồm retry và crash/resume |
+| Bộ host hiện tại | `63 passed, 253 deselected` | Cổng host cùng 9 test bổ sung của nhóm (4 single, 5 workflow) |
 | Benchmark workflow | 70/70 lượt đạt | 14 claim × 5 seed: 11, 22, 33, 44, 55 |
 | Crash suite có sẵn | `crash_safety 20/20` | Kiểm host và swarm; không phải 20 kịch bản riêng của workflow |
-| Kiểm trên bản clone trước khi đẩy | `116 passed, 186 deselected` | Bộ host và ma trận workflow trong repo, chưa có 5 test local bổ sung |
 
-Benchmark riêng được lưu tại `src/reports/benchmark_workflow.json` trong bản local:
+Số `59 passed` và `116 passed` trong bản trước là lần chạy trước khi bổ sung đủ test; không dùng làm số hiện tại.
+
+Benchmark chính thức của nhóm nằm tại `src/reports/benchmark.json` (4 shape); số của workflow:
 
 | Chỉ số | Giá trị |
 | --- | ---: |
@@ -163,7 +166,7 @@ commit và soạn bản báo cáo này từ các bằng chứng đã có.
 Code và test được Codex hỗ trợ tạo, không phải toàn bộ được tôi tự viết thủ công.
 Tôi trực tiếp chạy các lệnh kiểm tra trong terminal VS Code trên ổ D và đối chiếu
 kết quả: 62 test workflow đạt, claim C-001 trả `resolved` với 35.000 đồng,
-benchmark pass/pass^5 bằng 1.000, crash suite 20/20 và bộ host 59 test đạt.
+benchmark pass/pass^5 bằng 1.000, crash suite 20/20 và bộ host 63 test đạt.
 
 Số liệu, run ID và commit trong báo cáo được lấy từ lần chạy thực tế và lịch sử
 Git; không tự tạo kết quả hidden hoặc sửa tay báo cáo JSON để thay đổi điểm.
@@ -178,8 +181,7 @@ qua năm seed đã kiểm tra.
 
 Giới hạn hiện tại: kết quả 100% chỉ áp dụng cho bộ public. Chưa có dữ liệu hidden
 để kết luận đạt ngưỡng hidden của đề bài. Crash suite 20/20 là bằng chứng của host
-và swarm; bằng chứng riêng cho workflow nằm ở T12 và các test bổ sung local.
+và swarm; bằng chứng riêng cho workflow nằm ở T12 và `test_workflow_edges.py`.
 
-Trước khi nộp bài nhóm, cần đồng bộ phần
-đóng góp Workflow vào `TEAM.md`, đồng thời đưa các file bằng chứng local cần thiết
-vào repo nếu nhóm sử dụng chúng trong hồ sơ nộp bài.
+Đóng góp Workflow đã được đồng bộ vào `TEAM.md`; test edge-case đã có trên main
+tại commit `20865aa`.

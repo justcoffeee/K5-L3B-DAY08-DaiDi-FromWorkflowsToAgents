@@ -5,14 +5,14 @@
 - Tên nhóm: DaiDi
 - Lớp: L3B
 - Repo nhóm: `K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents`
-- URL repo, nhánh nộp, commit chốt: https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents, main
+- URL repo, nhánh nộp, commit chốt: https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents, main, `c139260`
 
 ## Thành viên
 
 | STT | Họ tên | MSSV | Email | GitHub | Vai trò |
 | --: | ------ | ---- | ----- | ------ | ------- |
 |   1 | Lê Thanh Tùng | 2A202603819 | lethanhtung6803@gmail.com | griin-03 | single agent (Shape B) + integration |
-|   2 | Cấn Xuân Nghĩa | 2A202603805 | cannghia.xn@gmail.com | xuannghia2 | workflow (Shape A) |
+|   2 | Cấn Xuân Nghĩa | 2A202603805 | cannghia.xn@gmail.com | xuannghia2 | workflow (Shape A, shape được chọn) |
 |   3 | Nguyễn Mạnh Hùng | 2A202603852 | nguyenmanhhunglun@gmail.com | HungLunnn | orchestrator (Shape C) |
 
 Gợi ý chia vai:
@@ -26,9 +26,9 @@ Gợi ý chia vai:
 
 | Người | Vai | Commit | Test đã thêm hoặc sửa |
 | --- | --- | --- | --- |
-| Lê Thanh Tùng | single agent (Shape B) | 75ca166, 3ccf5b4 | src/tests/test_single_shape.py, tests/test_public_matrix.py (single) |
-| Cấn Xuân Nghĩa | workflow (Shape A) | 94735f4, 20865aa | src/tests/test_workflow_edges.py, tests/test_public_matrix.py (workflow) |
-| Nguyễn Mạnh Hùng | orchestrator (Shape C) | 4ecff4b | tests/test_public_matrix.py (orchestrator) |
+| Lê Thanh Tùng | single agent (Shape B) | 3ccf5b4, 75ca166 | src/tests/test_single_shape.py |
+| Cấn Xuân Nghĩa | workflow (Shape A, shape được chọn) | 94735f4, 20865aa | src/tests/test_workflow_edges.py |
+| Nguyễn Mạnh Hùng | orchestrator (Shape C) | 4ecff4b, c139260 | src/tests/test_orchestrator_edges.py |
 
 ## Cá nhân
 

@@ -43,16 +43,16 @@ Nhiệm vụ chính theo đề bài Lab 8:
 
 - Thay thế stub `orchestrator.py` (có `TODO CP2`/`TODO CP3`) bằng triển khai đầy đủ 5 bước: đọc claim → build handoff sanitize → investigator chỉ đọc → lập giá từ code → orchestrator gọi host ghi refund.
 - Không sửa bất kỳ file thước đo nào (`metrics.py`, `grade_hidden.py`, `durability.py`, `policy.py`, `config/`, `data/`), giữ `python -m pytest -q` (cổng host) xanh.
-- Commit chính: `4ecff4b` — file `src/lab8/shapes/orchestrator.py`.
-- Test đã chạy: `pytest -q -m student -k orchestrator` → 62 passed / 62 (C-001..C-010, C-013, C-014 × 5 seed; T11 retry; T12 crash).
+- Commit chính: `4ecff4b` — file `src/lab8/shapes/orchestrator.py`; `c139260` — file `src/tests/test_orchestrator_edges.py` và cập nhật báo cáo.
+- Test đã chạy: `pytest -q -m student -k orchestrator` → 67 passed (62 test ma trận C-001..C-010, C-013, C-014 × 5 seed, T11 retry, T12 crash; cộng 5 test edge-case).
 - Spot-check thủ công khớp exact expected: C-014 (resolved, proposal 150000, refund 120000), C-008 (resolved, proposal 35000, refund 20000), C-013 (denied, policy_denied), C-007 (denied, approval hết hạn).
-- Viết thêm file test tự kiểm tra edge-case `src/tests/test_orchestrator_edges.py` (không phải file chấm chính thức): 5 test pass (unknown_claim, missing_order_id, outside_principal, crash_recovery_idempotent, retry_same_amount_no_double_pay).
+- Viết thêm file test tự kiểm tra edge-case `src/tests/test_orchestrator_edges.py` tại commit `c139260` (không phải file chấm chính thức): 5 test pass (unknown_claim, missing_order_id, outside_principal, crash_recovery_idempotent, retry_same_amount_no_double_pay).
 
 ## 4. Bằng chứng
 
-- Tên test: `tests/test_public_matrix.py::test_public_single_run_cases[orchestrator-C-001-11]` … `[orchestrator-C-014-55]`, `test_t11_retry_keeps_one_refund[orchestrator]`, `test_t12_crash_before_checkpoint_does_not_double_pay[orchestrator]`; thêm `tests/test_orchestrator_edges.py::test_orchestrator_unknown_claim`, `test_orchestrator_missing_order_id`, `test_orchestrator_outside_principal`, `test_orchestrator_crash_recovery_idempotent`, `test_orchestrator_retry_same_amount_no_double_pay`.
+- Tên test: `tests/test_public_matrix.py::test_public_single_run_cases[11-C-001-orchestrator]` … `[55-C-014-orchestrator]`, `test_t11_retry_keeps_one_refund[orchestrator]`, `test_t12_crash_before_checkpoint_does_not_double_pay[orchestrator]`; thêm `tests/test_orchestrator_edges.py::test_orchestrator_unknown_claim`, `test_orchestrator_missing_order_id`, `test_orchestrator_outside_principal`, `test_orchestrator_crash_recovery_idempotent`, `test_orchestrator_retry_same_amount_no_double_pay`.
 - Run id mẫu: `R-orchestrator-<claim_id>-s<seed>` (ví dụ `R-orchestrator-C-014-s11`), trace ghi tại `traces/<run_id>.json`.
-- Link commit: `https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents/commit/4ecff4b`
+- Link commit: `https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents/commit/4ecff4b` và `https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents/commit/c139260`
 - Trích đoạn kết quả quan trọng:
   - C-014: status=resolved, proposal_amount=150000, refund_effects=[120000], audit_committed=1.
   - C-008: status=resolved, proposal_amount=35000, refund_effects=[20000], audit_committed=1.
@@ -62,12 +62,12 @@ Nhiệm vụ chính theo đề bài Lab 8:
 
 - Sử dụng AI hỗ trợ hiểu đề bài (`readme.md`, `docs/business_rules.md`, `docs/contracts.md`) và viết code Shape C orchestrator.
 - Tôi đã tự đọc toàn bộ source liên quan (`durability.py`, `policy.py`, `handoff.py`, `runtime.py`, `swarm_reference.py`, `schemas.py`, `trace.py`, `conftest.py`) để xác nhận logic tiền, approval, cap theo đơn, idempotency và trace contract trước khi code.
-- Tự kiểm tra bằng cách chạy `python -m lab8.smoke`, `pytest -q` (host xanh), `pytest -m student -k orchestrator` (62/62 xanh) và chạy thủ công các claim khó (C-008, C-014, C-013, C-007) để so sánh exact với `expected` trong `public_claims.jsonl`.
+- Tự kiểm tra bằng cách chạy `python -m lab8.smoke`, `pytest -q` (host xanh), `pytest -m student -k orchestrator` (67 xanh, gồm 5 edge test) và chạy thủ công các claim khó (C-008, C-014, C-013, C-007) để so sánh exact với `expected` trong `public_claims.jsonl`.
 - Không sử dụng AI để decision số tiền refund; số tiền đều do `compute_compensation` (code) tính, model chỉ soạn chữ trả lời.
 
 ## 6. Tự đánh giá
 
 - Đã hoàn thành 100% phần Shape C orchestrator giao cho thành viên C.
-- Đáp ứng ba điều kiện must-pass: không refund khi thiếu approval hợp lệ; không lộ `CANARY_SECRET_*` trong trace/kết quả; crash không tạo hơn một refund (crash suite T12, idempotent replay).
+- Đáp ứng ba điều kiện must-pass: không refund khi thiếu approval hợp lệ; không lộ `CANARY_SECRET_*` trong trace/kết quả; crash không tạo hơn một refund (T12 crash/resume; crash suite 20/20 là của host/swarm).
 - `python -m pytest -q` (cổng host) vẫn xanh; không sửa file host.
-- Hash commit: `4ecff4b`, link commit: `https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents/commit/4ecff4b`.
+- Hash commit: `4ecff4b` và `c139260`; link commit: `https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents/commit/4ecff4b`, `https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents/commit/c139260`.

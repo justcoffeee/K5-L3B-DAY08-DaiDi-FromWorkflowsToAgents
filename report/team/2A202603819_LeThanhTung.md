@@ -50,14 +50,14 @@
   - `75ca166`: Bổ sung bộ test `test_single_shape.py` và cập nhật báo cáo đóng góp.
 - **Kết quả Unit Tests**:
   - `python -m pytest tests/test_single_shape.py -v` -> **4/4 passed**.
-  - `python -m pytest -q` (Cổng host gate) -> **58 passed, 248 deselected** (100% PASS).
+  - `python -m pytest -q` (Cổng host gate) -> **63 passed, 253 deselected** (100% PASS).
   - `pytest -m student -k "single"` -> **62/62 passed** (bao gồm 60 matrix trials + T11 idempotency + T12 crash recovery).
 - **Benchmark Metrics (Shape B - Single Agent)**:
   - Pass rate: **1.000** (70/70 trials)
   - Pass^5: **1.000** (toàn bộ 14 claims vượt qua 100% cả 5 seeds)
   - Variance: **0.000000** (độ ổn định tuyệt đối giữa các seed ngẫu nhiên)
   - Simulated Cost/Success: **47.95 VND**
-  - Crash Safety: **20/20**
+  - Crash Safety: **20/20** (suite host + swarm; Shape B được kiểm crash/resume qua T12 và `test_single_forwards_injected_crash`)
 
 ## 5. Công cụ AI đã dùng
 
@@ -74,4 +74,4 @@
 
 - Hoàn thành xuất sắc toàn bộ yêu cầu của Shape B — ReAct Single Agent.
 - Mã nguồn tuân thủ tuyệt đối quy tắc ranh giới quyền lực (Model chỉ đọc, Code quyết tiền và ghi sổ cái).
-- Đạt kết quả benchmark hoàn hảo (100% pass rate, variance = 0, crash safety 20/20).
+- Đạt kết quả benchmark hoàn hảo (100% pass rate, variance = 0); crash suite 20/20 là bằng chứng của host/swarm, còn crash/resume của Shape B được kiểm bằng T12.
