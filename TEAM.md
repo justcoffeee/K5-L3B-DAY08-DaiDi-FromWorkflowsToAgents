@@ -11,7 +11,7 @@
 
 | STT | Họ tên | MSSV | Email | GitHub | Vai trò |
 | --: | ------ | ---- | ----- | ------ | ------- |
-|   1 | Phạm Hoàng Huy | 2A202603836 | — | justcoffeee | Nhóm trưởng — tích hợp, kiểm tra, benchmark, hồ sơ |
+|   1 | Phạm Hoàng Huy | 2A202603836 | huyclaynun@gmail.com | justcoffeee | Nhóm trưởng — tích hợp, kiểm tra, benchmark, hồ sơ |
 |   2 | Lê Thanh Tùng | 2A202603819 | lethanhtung6803@gmail.com | griin-03 | single agent (Shape B) + integration |
 |   3 | Cấn Xuân Nghĩa | 2A202603805 | cannghia.xn@gmail.com | xuannghia2 | workflow (Shape A, shape được chọn) |
 |   4 | Nguyễn Mạnh Hùng | 2A202603852 | nguyenmanhhunglun@gmail.com | HungLunnn | orchestrator (Shape C) |
