@@ -17,19 +17,24 @@ Phần này nối tiếp phần mini research ở buổi lý thuyết (slide 62�
 
 | Field | Hướng dẫn | Nhóm điền |
 | --- | --- | --- |
-| CÂU | R1 / R2 / R3 / R4 | |
-| SOURCE | Paper/blog, năm, URL, loại bằng chứng (benchmark, production report, blog kinh nghiệm) | |
-| CLAIM | Một kết luận gốc của nguồn. Không viết rộng hơn phạm vi paper | |
-| BOUNDARY | Model / dataset / setup giới hạn kết luận đó | |
-| HYPOTHESIS | Nếu đổi shape A→B (hoặc bật/tắt một thành phần), metric X sẽ đổi theo hướng nào, khoảng bao nhiêu | |
-| METHOD | Biến giữ cố định: model, tools, seed, corpus, giá, evaluator. Biến duy nhất được thay đổi: … | |
-| FAILURE / METRIC | Một lỗi dự kiến và cách đo nó: pass rate, pass^5, variance, cost/success, leak, bypass | |
+| CÂU | R1 / R2 / R3 / R4 | R2 |
+| SOURCE | Paper/blog, năm, URL, loại bằng chứng (benchmark, production report, blog kinh nghiệm) | MAST, NeurIPS 2025, *Why Do Multi-Agent LLM Systems Fail?*, benchmark trên nhiều multi-agent framework |
+| CLAIM | Một kết luận gốc của nguồn. Không viết rộng hơn phạm vi paper | Lỗi phổ biến nhất trong hệ multi-agent là lệch mục tiêu (goal misalignment) giữa sub-agent và orchestrator, không phải lỗi tool |
+| BOUNDARY | Model / dataset / setup giới hạn kết luận đó | Áp dụng cho LLM-based multi-agent, không nhất thiết áp dụng cho mock/deterministic agent như MockLLM |
+| HYPOTHESIS | Nếu đổi shape A→B (hoặc bật/tắt một thành phần), metric X sẽ đổi theo hướng nào, khoảng bao nhiêu | Swarm (D) sẽ có pass rate thấp hơn single (B) do điểm yếu tin ticket delay thay vì DB order row — variance của swarm sẽ > 0 khi thay seed |
+| METHOD | Biến giữ cố định: model, tools, seed, corpus, giá, evaluator. Biến duy nhất được thay đổi: … | Giữ cố định: MockLLM, tool set, corpus 14 claims, seeds [11,22,33,44,55], giá config/pricing.yaml. Biến thay đổi: topology (single vs swarm) |
+| FAILURE / METRIC | Một lỗi dự kiến và cách đo nó: pass rate, pass^5, variance, cost/success, leak, bypass | Swarm fail C-002 seed 55 do goal misalignment (trust ticket over DB). Đo bằng pass rate và variance: swarm variance = 0.000816 > single variance = 0.000000 |
 
 ## Kết quả ablation
 
 - Lệnh đã chạy (copy nguyên văn):
-- Run id / file report:
+  ```
+  python -m lab8.benchmark --shapes workflow,single,orchestrator,swarm --cases data/public_claims.jsonl --seeds 11,22,33,44,55 --out reports/benchmark.json
+  ```
+- Run id / file report: `src/reports/benchmark.json`
 - Kết quả so với hypothesis (đúng / sai / không kết luận được), kèm số liệu:
+  - **Đúng**: Swarm pass rate = 0.986 < single = 1.000; swarm variance = 0.000816 > single = 0.000000. Swarm fail C-002 seed 55 đúng như dự đoán (trust delay 5 days từ ticket, DB nói 2 days → trả 20000 thay vì denied).
+  - Single không có lỗi goal misalignment vì `decide()` không đọc ticket text, chỉ dùng DB order row để tính compensation.
 - Giới hạn: MockLLM không phải model sản xuất, latency là `unavailable`.
 
 Muốn đi xa hơn một ablation để lấy điểm cộng thì xem [docs/bonus_topics.md](../../docs/bonus_topics.md).
