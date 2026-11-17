@@ -18,8 +18,24 @@ ones. `lab8.trace.Trace` does this; your own tracer is fine if it matches.
 
 from __future__ import annotations
 
-from lab8.schemas import RunResult
-from lab8.shapes.common import not_implemented
+import sqlite3
+
+from lab8.db import connect
+from lab8.durability import InjectedCrash, issue_refund
+from lab8.handoff import make_handoff
+from lab8.mock_llm import complete
+from lab8.runtime import run_readonly_investigators
+from lab8.schemas import Budget, make_run_id
+from lab8.shapes.common import finish, safe_dump
+from lab8.tools import compute_compensation, get_claim_view, tool_cost
+from lab8.trace import Trace
+
+READONLY_TOOLS = [
+    "lookup_order",
+    "lookup_policy",
+    "compute_compensation",
+    "lookup_refund_history",
+]
 
 
 def run_claim(
@@ -29,7 +45,154 @@ def run_claim(
     store_path: str,
     crash_at: str | None = None,
 ) -> RunResult:
-    # TODO CP2 (student): thay stub này bằng shape orchestrator theo các bước ở docstring đầu file.
-    # TODO CP3 (student): truyền crash_at vào durability.issue_refund, không bắt InjectedCrash.
-    del store_path, crash_at
-    return not_implemented("orchestrator", claim_id, seed)
+    conn = connect(store_path)
+    try:
+        return _run(conn, claim_id, seed=seed, crash_at=crash_at)
+    finally:
+        conn.close()
+
+
+def _run(
+    conn: sqlite3.Connection,
+    claim_id: str,
+    *,
+    seed: int,
+    crash_at: str | None,
+) -> RunResult:
+    budget = Budget()
+    run_id = make_run_id("orchestrator", claim_id, seed)
+    trace = Trace(run_id)
+
+    # Bước 1: đọc claim qua tool chỉ đọc. Trace chỉ các field đã qua allowlist,
+    # KHÔNG được ghi ticket, parent_secret, raw_headers hay toàn bộ claim row.
+    budget.add_tool(tool_cost())
+    claim = get_claim_view(conn, claim_id)
+    trace.add(
+        "claim_view",
+        {
+            "found": bool(claim.get("found")),
+            "claim_id": claim.get("claim_id"),
+            "order_id": claim.get("order_id"),
+        },
+    )
+
+    if not claim.get("found"):
+        return finish(
+            conn,
+            shape="orchestrator",
+            claim_id=claim_id,
+            seed=seed,
+            status="failed",
+            proposal_amount=0,
+            budget=budget,
+            trace=trace,
+            error_reason="unknown_claim",
+        )
+
+    if not claim.get("order_id"):
+        return finish(
+            conn,
+            shape="orchestrator",
+            claim_id=claim_id,
+            seed=seed,
+            status="needs_info",
+            proposal_amount=0,
+            budget=budget,
+            trace=trace,
+            error_reason="missing_order_id",
+        )
+
+    # Bước 2: xây handoff sanitize. Chỉ các tool chỉ đọc được phép; facts không chứa
+    # secret/PII. model chỉ đọc handoff này, không được quyết số tiền.
+    handoff = make_handoff(
+        request_id=f"REQ-{claim_id}",
+        claim_id=claim_id,
+        task="check_applicable_policy",
+        facts={},
+        allowed_tools=list(READONLY_TOOLS),
+    )
+    trace.add("handoff", safe_dump(handoff))
+
+    # Bước 3: investigator chỉ có quyền đọc, chạy trên view của đơn hàng.
+    investigated = run_readonly_investigators(
+        conn, budget, handoff, principal_id=claim["principal_id"]
+    )
+
+    order_view = investigated["tools"].get("lookup_order", {})
+    trace.add("investigator", {"lookup_order": order_view})
+
+    if not order_view.get("visible"):
+        complete(budget, seed=seed, purpose="draft", prompt="escalated")
+        return finish(
+            conn,
+            shape="orchestrator",
+            claim_id=claim_id,
+            seed=seed,
+            status="escalated",
+            proposal_amount=0,
+            budget=budget,
+            trace=trace,
+            error_reason=order_view.get("reason"),
+        )
+
+    order = dict(order_view["order"])
+
+    # Bước 4: lập giá từ code (compute_compensation), model không được quyết số tiền.
+    quote_payload = investigated["tools"].get("compute_compensation")
+    if quote_payload is None:
+        budget.add_tool(tool_cost())
+        quote_payload = compute_compensation(conn, order)
+    trace.add("quote", quote_payload)
+
+    proposal = int(quote_payload["amount_vnd"])
+
+    if proposal <= 0:
+        complete(budget, seed=seed, purpose="draft", prompt="denied")
+        return finish(
+            conn,
+            shape="orchestrator",
+            claim_id=claim_id,
+            seed=seed,
+            status="denied",
+            proposal_amount=0,
+            budget=budget,
+            trace=trace,
+            error_reason=quote_payload.get("reason"),
+        )
+
+    # Bước 5: orchestrator (không phải investigator) gọi cổng host ghi refund.
+    # Truyền quote đầy đủ; host tự kiểm approval, trần theo đơn, idempotency rồi mới ghi ledger.
+    # crash_at được truyền thẳng và InjectedCrash không được bắt.
+    try:
+        outcome = issue_refund(conn, claim_id, proposal, crash_at=crash_at)
+    except InjectedCrash:
+        trace.add("crash", {"at": crash_at})
+        trace.write()
+        raise
+
+    if not outcome["ok"]:
+        status = "failed" if outcome["conflict"] else "denied"
+        return finish(
+            conn,
+            shape="orchestrator",
+            claim_id=claim_id,
+            seed=seed,
+            status=status,
+            proposal_amount=proposal,
+            budget=budget,
+            trace=trace,
+            error_reason=outcome["reason"],
+        )
+
+    complete(budget, seed=seed, purpose="draft", prompt=f"proposal={proposal}")
+    return finish(
+        conn,
+        shape="orchestrator",
+        claim_id=claim_id,
+        seed=seed,
+        status="resolved",
+        proposal_amount=proposal,
+        budget=budget,
+        trace=trace,
+        error_reason=None,
+    )
