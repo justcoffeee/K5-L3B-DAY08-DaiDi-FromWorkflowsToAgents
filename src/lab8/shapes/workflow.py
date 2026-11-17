@@ -29,14 +29,11 @@ ones. `lab8.trace.Trace` does this; your own tracer is fine if it matches.
 
 from __future__ import annotations
 
-import sqlite3
-
 from lab8.db import connect
-from lab8.durability import InjectedCrash, issue_refund
-from lab8.mock_llm import complete
+from lab8.durability import issue_refund
 from lab8.schemas import Budget, RunResult, make_run_id
 from lab8.shapes.common import finish
-from lab8.tools import compute_compensation, lookup_order, tool_cost
+from lab8.tools import compute_compensation, get_claim_view, lookup_order, tool_cost
 from lab8.trace import Trace
 
 
@@ -47,137 +44,65 @@ def run_claim(
     store_path: str,
     crash_at: str | None = None,
 ) -> RunResult:
-    conn = connect(store_path)
-    try:
-        return _run(conn, claim_id, seed=seed, crash_at=crash_at)
-    finally:
-        conn.close()
+    """Process one claim through fixed steps; the host alone commits money.
 
-
-def _run(conn: sqlite3.Connection, claim_id: str, *, seed: int, crash_at: str | None) -> RunResult:
+    No model call is needed. Ticket text never controls the quote or enters
+    the trace. Injected crashes propagate so the caller can exercise resume.
+    """
     budget = Budget()
-    run_id = make_run_id("workflow", claim_id, seed)
-    trace = Trace(run_id)
+    trace = Trace(make_run_id("workflow", claim_id, seed))
+    conn = connect(store_path)
 
-    # Step 1: Read claim via get_claim_view (allowlisted fields, no secrets)
-    budget.add_tool(tool_cost())
-    claim_row = conn.execute(
-        "SELECT claim_id, principal_id, order_id, ticket FROM claims WHERE claim_id = ?",
-        (claim_id,),
-    ).fetchone()
-
-    if claim_row is None:
-        trace.add("error", {"reason": "unknown_claim"})
+    def done(status: str, amount: int = 0, reason: str | None = None) -> RunResult:
+        trace.add("decision", {"status": status, "proposal_amount": amount, "reason": reason})
         return finish(
             conn,
             shape="workflow",
             claim_id=claim_id,
             seed=seed,
-            status="failed",
-            proposal_amount=0,
+            status=status,
+            proposal_amount=amount,
             budget=budget,
             trace=trace,
-            error_reason="unknown_claim",
+            error_reason=reason,
         )
 
-    principal_id = claim_row["principal_id"]
-    order_id = claim_row["order_id"]
-    trace.add("claim", {"claim_id": claim_id, "order_id": order_id})
-
-    # Step 2: Missing order_id → needs_info
-    if not order_id:
-        trace.add("decision", {"status": "needs_info"})
-        return finish(
-            conn,
-            shape="workflow",
-            claim_id=claim_id,
-            seed=seed,
-            status="needs_info",
-            proposal_amount=0,
-            budget=budget,
-            trace=trace,
-            error_reason="missing_order_id",
-        )
-
-    # Step 3: lookup_order (verify ownership, get DB-authoritative order row)
-    budget.add_tool(tool_cost())
-    order_view = lookup_order(conn, order_id, principal_id)
-    trace.add("lookup_order", {"visible": order_view.get("visible"), "reason": order_view.get("reason")})
-
-    if not order_view.get("visible"):
-        trace.add("decision", {"status": "escalated"})
-        return finish(
-            conn,
-            shape="workflow",
-            claim_id=claim_id,
-            seed=seed,
-            status="escalated",
-            proposal_amount=0,
-            budget=budget,
-            trace=trace,
-            error_reason=order_view.get("reason"),
-        )
-
-    # Step 4: Quote from DB order row (ignore ticket text — adversarial resistance)
-    order = dict(order_view["order"])
-    budget.add_tool(tool_cost())
-    quote_payload = compute_compensation(conn, order)
-    proposal = int(quote_payload["amount_vnd"])
-    trace.add("quote", {"amount_vnd": proposal, "reason": quote_payload.get("reason")})
-
-    # Step 5: Quote = 0 → denied (do NOT call issue_refund)
-    if proposal <= 0:
-        trace.add("decision", {"status": "denied", "reason": quote_payload.get("reason")})
-        return finish(
-            conn,
-            shape="workflow",
-            claim_id=claim_id,
-            seed=seed,
-            status="denied",
-            proposal_amount=0,
-            budget=budget,
-            trace=trace,
-            error_reason=quote_payload.get("reason"),
-        )
-
-    # Step 6: Quote > 0 → host validates approval, cap, idempotency, then writes ledger
-    # Pass FULL quote (host subtracts prior refunds for this order)
-    # Pass crash_at through; must NOT catch InjectedCrash
     try:
+        budget.add_tool(tool_cost())
+        claim = get_claim_view(conn, claim_id)
+        # Do not log ticket text: it is untrusted and may contain secrets or PII.
+        trace.add("get_claim_view", {"found": claim["found"]})
+        if not claim["found"]:
+            return done("failed", reason="unknown_claim")
+        if not claim["order_id"]:
+            return done("needs_info", reason="missing_order_id")
+
+        budget.add_tool(tool_cost())
+        order_view = lookup_order(conn, claim["order_id"], claim["principal_id"])
+        trace.add("lookup_order", {"visible": order_view["visible"], "reason": order_view["reason"]})
+        if not order_view["visible"]:
+            return done("escalated", reason=order_view["reason"])
+
+        # This tool uses structured order fields and current, effective policies.
+        budget.add_tool(tool_cost())
+        quote = compute_compensation(conn, order_view["order"])
+        proposal = int(quote["amount_vnd"])
+        trace.add("quote", {"amount_vnd": proposal})
+        if proposal <= 0:
+            return done("denied", reason=quote["reason"])
+
+        # Only the host caps approvals and subtracts prior refunds for this order.
+        budget.add_tool(tool_cost())
+        trace.add("refund_requested", {"proposal_amount": proposal})
         outcome = issue_refund(conn, claim_id, proposal, crash_at=crash_at)
-    except InjectedCrash:
-        trace.add("crash", {"at": crash_at})
-        trace.write()
-        raise
-
-    if not outcome["ok"]:
-        result_status = "failed" if outcome["conflict"] else "denied"
-        trace.add("decision", {"status": result_status, "reason": outcome["reason"]})
-        return finish(
-            conn,
-            shape="workflow",
-            claim_id=claim_id,
-            seed=seed,
-            status=result_status,
-            proposal_amount=proposal,
-            budget=budget,
-            trace=trace,
-            error_reason=outcome["reason"],
-        )
-
-    # Optional: draft reply text via MockLLM
-    complete(budget, seed=seed, purpose="draft", prompt=f"proposal={proposal}")
-
-    # Step 7: resolved
-    trace.add("decision", {"status": "resolved", "refund_ok": True})
-    return finish(
-        conn,
-        shape="workflow",
-        claim_id=claim_id,
-        seed=seed,
-        status="resolved",
-        proposal_amount=proposal,
-        budget=budget,
-        trace=trace,
-        error_reason=None,
-    )
+        trace.add("issue_refund", {"ok": outcome["ok"], "reason": outcome["reason"]})
+        if not outcome["ok"]:
+            status = "failed" if outcome["conflict"] else "denied"
+            return done(status, proposal, outcome["reason"])
+        return done("resolved", proposal)
+    finally:
+        # Flush even when InjectedCrash propagates; always release the SQLite file.
+        try:
+            trace.write()
+        finally:
+            conn.close()
