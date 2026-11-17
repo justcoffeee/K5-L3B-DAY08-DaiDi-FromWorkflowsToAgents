@@ -105,7 +105,7 @@ Các lệnh được chạy trong thư mục `src` của bản làm bài trên �
 | --- | --- | --- |
 | Starter smoke | `lab8.smoke pass` | Kiểm tra môi trường và swarm tham chiếu |
 | Ma trận public workflow | `62 passed` | Workflow T01–T14, gồm retry và crash/resume |
-| Bộ host hiện tại | `63 passed, 253 deselected` | Cổng host cùng 9 test bổ sung của nhóm (4 single, 5 workflow) |
+| Bộ host hiện tại | `72 passed, 253 deselected` | Cổng host cùng 18 test bổ sung của nhóm (4 single, 5 workflow, 9 tích hợp) |
 | Benchmark workflow | 70/70 lượt đạt | 14 claim × 5 seed: 11, 22, 33, 44, 55 |
 | Crash suite có sẵn | `crash_safety 20/20` | Kiểm host và swarm; không phải 20 kịch bản riêng của workflow |
 
@@ -166,7 +166,7 @@ commit và soạn bản báo cáo này từ các bằng chứng đã có.
 Code và test được Codex hỗ trợ tạo, không phải toàn bộ được tôi tự viết thủ công.
 Tôi trực tiếp chạy các lệnh kiểm tra trong terminal VS Code trên ổ D và đối chiếu
 kết quả: 62 test workflow đạt, claim C-001 trả `resolved` với 35.000 đồng,
-benchmark pass/pass^5 bằng 1.000, crash suite 20/20 và bộ host 63 test đạt.
+benchmark pass/pass^5 bằng 1.000, crash suite 20/20 và bộ host 72 test đạt.
 
 Số liệu, run ID và commit trong báo cáo được lấy từ lần chạy thực tế và lịch sử
 Git; không tự tạo kết quả hidden hoặc sửa tay báo cáo JSON để thay đổi điểm.

@@ -6,11 +6,12 @@
 - Lớp: L3B
 - Repo nhóm: https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents
 - Nhánh nộp: `main`
-- Commit chốt: `9e5a17e`
+- Commit chốt: `bad03b1`
 - Thành viên:
 
 | Thành viên | MSSV | Phần phụ trách |
 | --- | --- | --- |
+| Phạm Hoàng Huy | 2A202603836 | Nhóm trưởng — tích hợp, kiểm tra, benchmark, hồ sơ |
 | Lê Thanh Tùng | 2A202603819 | Shape B `single`, unit test và benchmark |
 | Cấn Xuân Nghĩa | 2A202603805 | Shape A `workflow`, test edge-case |
 | Nguyễn Mạnh Hùng | 2A202603852 | Shape C `orchestrator`, test edge-case |
@@ -23,6 +24,7 @@ Mục tiêu của nhóm là cài cùng một bài toán hoàn phí vận chuyể
 
 Cách chia việc:
 
+- Huy điều phối, chốt kiến trúc, kiểm tra chéo ba shape, chạy benchmark/ablation và tổng hợp hồ sơ.
 - Nghĩa phụ trách Shape A `workflow`: các bước Python cố định, không gọi model.
 - Tùng phụ trách Shape B `single`: vòng ReAct giới hạn 8 bước, model chỉ chọn tool đọc.
 - Hùng phụ trách Shape C `orchestrator`: handoff sanitize, investigator chỉ đọc, orchestrator gọi cổng ghi.
@@ -71,6 +73,8 @@ Số liệu lấy từ `src/reports/benchmark.json` (14 claim × 5 seed = 70 tri
 
 Crash suite đạt **20/20**. Cần đọc đúng phạm vi: suite 20/20 kiểm host và swarm reference; crash của ba shape nhóm viết được kiểm bổ sung bằng T12 trong ma trận student (crash rồi resume vẫn đúng một refund, một audit `refund_committed`).
 
+Kiểm tra tích hợp của nhóm trưởng: 6 claim đại diện × 3 shape cho cùng status/proposal/refund/audit; 9 test host mới trong `src/tests/test_integration_consistency.py`. Host gate hiện có **72 test**, ma trận student **253 test**, tất cả xanh.
+
 Nhận xét:
 
 - Workflow, single và orchestrator cùng đạt 70/70, nhưng workflow rẻ nhất (34,29 VND) và không gọi model. Single và orchestrator không tăng pass rate mà tăng cost/success lần lượt lên 47,95 và 56,44 VND.
@@ -90,6 +94,7 @@ Nhận xét:
 
 | Thành viên | Vai | Commit | Test đã thêm/sửa |
 | --- | --- | --- | --- |
+| Phạm Hoàng Huy | Nhóm trưởng — tích hợp, kiểm tra, benchmark, hồ sơ | `bad03b1` | `src/tests/test_integration_consistency.py` |
 | Lê Thanh Tùng | Shape B `single` + integration | `3ccf5b4`, `75ca166` | `src/tests/test_single_shape.py` |
 | Cấn Xuân Nghĩa | Shape A `workflow` (shape được chọn) | `94735f4`, `20865aa` | `src/tests/test_workflow_edges.py` |
 | Nguyễn Mạnh Hùng | Shape C `orchestrator` | `4ecff4b`, `c139260` | `src/tests/test_orchestrator_edges.py` |

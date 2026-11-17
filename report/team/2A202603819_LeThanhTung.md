@@ -50,7 +50,7 @@
   - `75ca166`: Bổ sung bộ test `test_single_shape.py` và cập nhật báo cáo đóng góp.
 - **Kết quả Unit Tests**:
   - `python -m pytest tests/test_single_shape.py -v` -> **4/4 passed**.
-  - `python -m pytest -q` (Cổng host gate) -> **63 passed, 253 deselected** (100% PASS).
+  - `python -m pytest -q` (Cổng host gate) -> **72 passed, 253 deselected** (100% PASS).
   - `pytest -m student -k "single"` -> **62/62 passed** (bao gồm 60 matrix trials + T11 idempotency + T12 crash recovery).
 - **Benchmark Metrics (Shape B - Single Agent)**:
   - Pass rate: **1.000** (70/70 trials)

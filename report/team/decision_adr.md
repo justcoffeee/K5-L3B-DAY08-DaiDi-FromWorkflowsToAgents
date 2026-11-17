@@ -4,7 +4,7 @@
 `Shape chọn` phải là đúng một trong: `workflow`, `single`, `orchestrator`, `swarm`. Đây là shape được chấm cổng hidden.
 
 - Shape chọn: workflow
-- Commit hash: 9e5a17e
+- Commit hash: bad03b1
 - Run id dẫn chứng: R-workflow-C-001-s11
 - Pass rate / pass^5 / seed min-max / variance: 1.000 / 1.000 / 1.000–1.000 / 0.000000
 - Cost per success (mô phỏng, VND): 34.29
@@ -16,6 +16,8 @@
 Shape A (`workflow`) đạt pass rate 1.000, pass^5 1.000, variance 0.000 trên 14 claim × 5 seed, với 0 model call và cost/success 34.29 VND (mô phỏng) — thấp nhất trong ba shape cùng đạt 70/70. Các bước là Python cố định: đọc claim qua `get_claim_view`, lấy order theo principal, tính quote bằng `compute_compensation`, rồi gọi `durability.issue_refund` với quote đầy đủ. Số tiền, approval, trần theo đơn và idempotency đều do host code quyết, nên đây là kiến trúc **ít tự chủ nhất mà vẫn làm đúng toàn bộ public matrix**.
 
 Single cũng đạt 70/70 nhưng cần khoảng 5.36 model call/trial và cost 47.95 VND; orchestrator đạt 70/70 với cost 56.44 VND. Hai shape này không tăng pass rate mà tăng chi phí và thêm bề mặt quyết định của model. Vì vậy nhóm chọn workflow cho cổng hidden.
+
+Trước khi chốt, nhóm trưởng chạy kiểm tra chéo 6 claim đại diện × 3 shape; cả ba cho cùng status/proposal/refund/audit, nên quyết định dựa trên cost và mức tự chủ chứ không do một shape lệch kết quả. Test tích hợp nằm tại `src/tests/test_integration_consistency.py`.
 
 ## Có đáng đổi lấy multi-agent không
 
