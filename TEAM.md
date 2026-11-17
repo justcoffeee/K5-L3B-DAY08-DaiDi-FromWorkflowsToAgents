@@ -24,7 +24,7 @@ Gợi ý chia vai:
 
 | Người | Vai | Commit | Test đã thêm hoặc sửa |
 | --- | --- | --- | --- |
-| Lê Thanh Tùng | Shape B single + A workflow + C orchestrator | feat(shapes): implement workflow, single, orchestrator — 248/248 student tests pass | test_public_matrix.py::test_public_single_run_cases[*-single], test_t11_retry_keeps_one_refund[single], test_t12_crash_before_checkpoint_does_not_double_pay[single] |
+| Lê Thanh Tùng | Shape B single + A workflow + C orchestrator | 3ccf5b4, 2f12262 | src/tests/test_single_shape.py, test_public_matrix.py (single) |
 
 ## Cá nhân
 
@@ -51,4 +51,5 @@ Sao chép mục dưới đây cho từng thành viên.
 - Implement `src/lab8/shapes/single.py`: ReAct loop 8 bước, chỉ dùng read tools, host gọi `durability.issue_refund`
 - Implement `src/lab8/shapes/workflow.py`: pipeline Python cố định, adversarial-safe (không tin ticket text)
 - Implement `src/lab8/shapes/orchestrator.py`: handoff sanitized → investigator → orchestrator gọi issue_refund
+- Thêm bộ unit test chuyên biệt cho single agent: `src/tests/test_single_shape.py` kiểm tra unknown claim, adversarial prompt injection resistance, trace contract v1, không rò rỉ canary secrets, và chuyển tiếp InjectedCrash đúng chuẩn.
 - Chạy benchmark: single pass rate 1.000, variance 0.000, crash safety 20/20
