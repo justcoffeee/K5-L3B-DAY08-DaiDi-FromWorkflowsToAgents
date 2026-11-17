@@ -15,7 +15,27 @@ Nhiệm vụ chính theo đề bài Lab 8:
 - Viết orchestrator và investigator cho quy trình xử lý claim hoàn phí vận chuyển LogiX-VN.
 - Investigator chỉ có quyền gọi các tool đọc (lookup_order, lookup_policy, compute_compensation, lookup_refund_history) thông qua `run_readonly_investigators`.
 - Orchestrator là đơn vị duy nhất gọi cổng ghi `durability.issue_refund` (host), truyền quote đầy đủ từ `compute_compensation`; host tự kiểm approval, trần theo đơn và idempotency.
-- Hàm trả `RunResult` (import từ `lab8.schemas`) với `run_id = make_run_id("orchestrator", claim_id, seed)`; mọi return path (kể cả early return: unknown_claim, missing_order_id, escalated, denied) đều ghi trace theo contract v1 (`RunResult.trace_path`, `run_id` khớp, `events` list).
+- Hàm trả `RunResult` (đã import `from lab8.schemas import Budget, make_run_id, RunResult`) với `run_id = make_run_id("orchestrator", claim_id, seed)`; mọi return path (kể cả early return: unknown_claim, missing_order_id, escalated, denied) đều ghi trace theo contract v1 (`RunResult.trace_path`, `run_id` khớp, `events` list).
+
+  ```python
+  from lab8.schemas import Budget, make_run_id, RunResult
+  from lab8.trace import Trace
+  ...
+  run_id = make_run_id("orchestrator", claim_id, seed)
+  trace = Trace(run_id)
+  ...
+  return finish(
+      conn,
+      shape="orchestrator",
+      claim_id=claim_id,
+      seed=seed,
+      status="resolved",
+      proposal_amount=proposal,
+      budget=budget,
+      trace=trace,
+      error_reason=None,
+  )
+  ```
 - Model chỉ dùng để soạn chữ trả lời (`complete`, purpose="draft"), không được quyết số tiền và không được gọi ghi refund.
 - Truyền `crash_at` thẳng vào `durability.issue_refund`, không bắt `InjectedCrash` (đáp ứng crash suite T12: crash không tạo hơn một refund, idempotent replay).
 
@@ -23,15 +43,16 @@ Nhiệm vụ chính theo đề bài Lab 8:
 
 - Thay thế stub `orchestrator.py` (có `TODO CP2`/`TODO CP3`) bằng triển khai đầy đủ 5 bước: đọc claim → build handoff sanitize → investigator chỉ đọc → lập giá từ code → orchestrator gọi host ghi refund.
 - Không sửa bất kỳ file thước đo nào (`metrics.py`, `grade_hidden.py`, `durability.py`, `policy.py`, `config/`, `data/`), giữ `python -m pytest -q` (cổng host) xanh.
-- Commit chính: `f97a806cd7df9b582992fe30487f5fd1c2e1b8e3` — file `src/lab8/shapes/orchestrator.py` (bổ sung sau khi nhóm merge/push).
+- Commit chính: `4ecff4b` — file `src/lab8/shapes/orchestrator.py`.
 - Test đã chạy: `pytest -q -m student -k orchestrator` → 62 passed / 62 (C-001..C-010, C-013, C-014 × 5 seed; T11 retry; T12 crash).
 - Spot-check thủ công khớp exact expected: C-014 (resolved, proposal 150000, refund 120000), C-008 (resolved, proposal 35000, refund 20000), C-013 (denied, policy_denied), C-007 (denied, approval hết hạn).
+- Viết thêm file test tự kiểm tra edge-case `src/tests/test_orchestrator_edges.py` (không phải file chấm chính thức): 5 test pass (unknown_claim, missing_order_id, outside_principal, crash_recovery_idempotent, retry_same_amount_no_double_pay).
 
 ## 4. Bằng chứng
 
-- Tên test: `tests/test_public_matrix.py::test_public_single_run_cases[orchestrator-C-001-11]` … `[orchestrator-C-014-55]`, `test_t11_retry_keeps_one_refund[orchestrator]`, `test_t12_crash_before_checkpoint_does_not_double_pay[orchestrator]`.
+- Tên test: `tests/test_public_matrix.py::test_public_single_run_cases[orchestrator-C-001-11]` … `[orchestrator-C-014-55]`, `test_t11_retry_keeps_one_refund[orchestrator]`, `test_t12_crash_before_checkpoint_does_not_double_pay[orchestrator]`; thêm `tests/test_orchestrator_edges.py::test_orchestrator_unknown_claim`, `test_orchestrator_missing_order_id`, `test_orchestrator_outside_principal`, `test_orchestrator_crash_recovery_idempotent`, `test_orchestrator_retry_same_amount_no_double_pay`.
 - Run id mẫu: `R-orchestrator-<claim_id>-s<seed>` (ví dụ `R-orchestrator-C-014-s11`), trace ghi tại `traces/<run_id>.json`.
-- Link commit: `https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents` (bổ sung sau khi nhóm merge/push).
+- Link commit: `https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents/commit/4ecff4b`
 - Trích đoạn kết quả quan trọng:
   - C-014: status=resolved, proposal_amount=150000, refund_effects=[120000], audit_committed=1.
   - C-008: status=resolved, proposal_amount=35000, refund_effects=[20000], audit_committed=1.
@@ -49,4 +70,4 @@ Nhiệm vụ chính theo đề bài Lab 8:
 - Đã hoàn thành 100% phần Shape C orchestrator giao cho thành viên C.
 - Đáp ứng ba điều kiện must-pass: không refund khi thiếu approval hợp lệ; không lộ `CANARY_SECRET_*` trong trace/kết quả; crash không tạo hơn một refund (crash suite T12, idempotent replay).
 - `python -m pytest -q` (cổng host) vẫn xanh; không sửa file host.
-- Hạn bị biết: chưa_push repo nhóm nên hash commit và link commit sẽ bổ sung sau khi nhóm merge.
+- Hash commit: `4ecff4b`, link commit: `https://github.com/justcoffeee/K5-L3B-DAY08-DaiDi-FromWorkflowsToAgents/commit/4ecff4b`.
